@@ -31,13 +31,21 @@ $DebloatScript = {
 Invoke-Command -ScriptBlock $DebloatScript
 
 # 4. Install & Enable OpenSSH Server
-Write-Host "[3/6] Installing OpenSSH Server..." -ForegroundColor Yellow
+Write-Host "[3/6] Ensuring OpenSSH Server is installed and running..." -ForegroundColor Yellow
 $Capability = Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH.Server*'
 if ($Capability.State -ne 'Installed') {
+    Write-Host "Installing OpenSSH Server (this may take 5-10 minutes)..." -ForegroundColor Gray
     Add-WindowsCapability -Online -Name $Capability.Name
 }
-Start-Service sshd
-Set-Service -Name sshd -StartupType 'Automatic'
+else {
+    Write-Host "OpenSSH Server is already installed." -ForegroundColor Gray
+}
+
+# Ensure service is configured properly regardless of install state
+Get-Service -Name sshd | Set-Service -StartupType 'Automatic'
+if ((Get-Service -Name sshd).Status -ne 'Running') {
+    Start-Service sshd
+}
 New-NetFirewallRule -Name sshd -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -LocalPort 22 -Action Allow
 
 # 5. Install/Upgrade PowerShell 7 (pwsh)

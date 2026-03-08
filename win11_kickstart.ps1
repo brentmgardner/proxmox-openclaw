@@ -52,14 +52,21 @@ New-NetFirewallRule -Name sshd -DisplayName 'OpenSSH Server (sshd)' -Enabled Tru
 Write-Host "[4/6] Upgrading to PowerShell 7..." -ForegroundColor Yellow
 winget install --id Microsoft.PowerShell --source winget --accept-package-agreements --accept-source-agreements
 
-# 6. Enable Remote Desktop (RDP)
-Write-Host "[5/6] Enabling Remote Desktop for all accounts..." -ForegroundColor Yellow
+# 6. Enable Remote Desktop (RDP) and ICMP (Ping)
+Write-Host "[5/6] Enabling Remote Desktop and ICMP (Ping)..." -ForegroundColor Yellow
 Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
 Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+# Enable ICMP4 (Ping)
+Set-NetFirewallRule -Name 'FPS-ICMP4-ERQ-In' -Enabled True -ErrorAction SilentlyContinue
+Set-NetFirewallRule -Name 'FPS-ICMP4-ERQ-In-NoScope' -Enabled True -ErrorAction SilentlyContinue
 
-# 7. Tie SSH to PowerShell 7 (Default Shell)
-Write-Host "[6/6] Setting PowerShell 7 as default SSH shell..." -ForegroundColor Yellow
+# 7. Prepare for SSH Key Access (ssh-copy-id readiness)
+Write-Host "[6/6] Preparing for SSH Key Access..." -ForegroundColor Yellow
+$userSshDir = "C:\Users\$($env:USERNAME)\.ssh"
+if (!(Test-Path $userSshDir)) { New-Item -Path $userSshDir -ItemType Directory -Force }
+
+# Tie SSH to PowerShell 7 (Default Shell)
 $pwshPath = "C:\Program Files\PowerShell\7\pwsh.exe"
 if (Test-Path $pwshPath) {
     if (!(Test-Path "HKLM:\SOFTWARE\OpenSSH")) { New-Item -Path "HKLM:\SOFTWARE\OpenSSH" -Force }
